@@ -40,7 +40,9 @@ public class MultithreadedServerTests extends TestCase {
 		// initialize accounts 
 		accounts = new Account[numLetters];
 		for (int i = A; i <= Z; i++) {
+			// accounts[i] = new Account(Z-i);
 			accounts[i] = new Account(Z-i);
+
 		}			 
 		
 		MultithreadedServer.runServer("src/hw09/data/increment", accounts);

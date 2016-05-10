@@ -7,8 +7,8 @@ import java.io.IOException;
 // TO DO: Task is currently an ordinary class.
 // You will need to modify it to make it a task,
 // so it can be given to an Executor thread pool.
-//
-class Task {
+
+class Task implements Runnable {
     private static final int A = constants.A;
     private static final int Z = constants.Z;
     private static final int numLetters = constants.numLetters;
@@ -57,7 +57,8 @@ class Task {
         }
         return rtn;
     }
-
+    
+    @Override
     public void run() {
         // tokenize transaction
         String[] commands = transaction.split(";");
@@ -98,7 +99,7 @@ public class MultithreadedServer {
     public static void runServer(String inputFile, Account accounts[])
         throws IOException {
 
-        // read transactions from input file
+    	// read transactions from input file
         String line;
         BufferedReader input =
             new BufferedReader(new FileReader(inputFile));
