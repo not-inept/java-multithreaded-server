@@ -10,30 +10,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-// TO DO: Task is currently an ordinary class.
-// You will need to modify it to make it a task,
-
-
 class Task implements Runnable {
     private static final int A = constants.A;
     private static final int Z = constants.Z;
     private static final int numLetters = constants.numLetters;
 
     private Account[] accounts;
-    private Account[] accountsCache;
     private String transaction;
 
+    private	HashMap<String, Integer> accountsCache;
     private HashMap<String, Integer> acc_writ_val_cache;
     private HashMap<String, Integer> acc_read_val_cache;
     
-    // TO DO: The sequential version of Task peeks at accounts
-    // whenever it needs to get a value, and opens, updates, and closes
-    // an account whenever it needs to set a value.  This won't work in
-    // the parallel version.  Instead, you'll need to cache values
-    // you've read and written, and then, after figuring out everything
-    // you want to do, (1) open all accounts you need, for reading,
-    // writing, or both, (2) verify all previously peeked-at values,
-    // (3) perform all updates, and (4) close all opened accounts.
 
     public Task(Account[] allAccounts, String trans) {
         accounts = allAccounts;
@@ -42,22 +30,25 @@ class Task implements Runnable {
     
  	/**
 	 * @param:  name   =: name of account as String
-	 * 	 		cached =: weither to look at cached or global
+	 * 	 		cached =: whether to look at cached or global
 	 * @throws: InvalidTransactionError on improper name
 	 * @return: Account associated with name
 	 **/
-    private Account lookupAccount(String name, Boolean cached) throws InvalidTransactionError {
+    private Account lookupAccount(String name, Boolean init) throws InvalidTransactionError {
         int accountNum = (int) (name.charAt(0)) - (int) 'A';
-        
-        if (accountNum < A || accountNum > Z || name.length() > 1)
+        int orig = accountNum;
+        if (accountNum < A || accountNum > Z)
             throw new InvalidTransactionError();
-        
-        Account a;
-        
-        if (cached) a = accountsCache[accountNum];
-        else        a = accounts     [accountNum];
-        
-        return a;
+        if (name.length() > 1 && init) {
+            for (int i = 1; i < name.length(); i++) {
+                if (name.charAt(i) != '*')
+                    throw new InvalidTransactionError();
+                Integer accountValue =  accounts[accountNum].peek();
+                accountsCache.put(String.valueOf((char)(accountNum%numLetters + 65)), accountValue);
+                accountNum = (accountValue % numLetters);
+            }        	
+        }
+        return accounts[orig];
     }
     
   	/**
@@ -69,7 +60,7 @@ class Task implements Runnable {
     	
     	// Close all write accounts after update
     	for (String key : acc_writ_val_cache.keySet()) {
-    		act = lookupAccount(key,false);
+    		act = lookupAccount(key, false);
     		if (!error) {
     			act.update(acc_writ_val_cache.get(key));
     		}
@@ -80,7 +71,7 @@ class Task implements Runnable {
     	
     	// Close all read accounts
     	for (String key : acc_read_val_cache.keySet()) {
-    		act = lookupAccount(key,false);
+    		act = lookupAccount(key, false);
     		/* shared mutable state */
 	             act.close();
 	      /* shared mutable state */
@@ -96,34 +87,31 @@ class Task implements Runnable {
     
   	/**
  	 * @param:  name   =: name of account as String
- 	 * 	 		cached =: weither to look at cached or global
+ 	 * 	 		cached =: whether to look at cached or global
  	 * @throws: InvalidTransactionError on improper name
  	 * @return: Account associated with name
  	 **/
     private void openAccount(Account act, String w, String w0) throws TransactionAbortException {
-    		Integer peek = 0;
-    		
+   		
         	if (w.equals(w0)) {	                        // case this is the write account        
         		if (!acc_writ_val_cache.containsKey(w)) { // Avoid errors
-        			peek = lookupAccount(w,true).peek();  
-        			
+     			
         			/* shared immutable state */
         			      act.open(true);
         			/* shared immutable state */
         			      
-    				acc_writ_val_cache.put(w, peek);
+    				acc_writ_val_cache.put(w, accountsCache.get(w));
         			acc_read_val_cache.remove(w);
         		}
         	} else {
         		if (!acc_writ_val_cache.containsKey(w) && // case read
         		    !acc_read_val_cache.containsKey(w)) { // Avoid errors
-        			peek = lookupAccount(w,true).peek();
         			
         			/* shared immutable state */
         			      act.open(false);
         			/* shared immutable state */
         			      
-        			acc_read_val_cache.put(w, peek);
+        			acc_read_val_cache.put(w, accountsCache.get(w));
         		}
         	}
     }
@@ -133,7 +121,7 @@ class Task implements Runnable {
     	// public Account account;
     	public String name;
     	public ParseResult(Account a, String s) {
-    		// account = a;
+    		// account = a;parseAccount
     		name = s;
     	}
     }
@@ -142,11 +130,11 @@ class Task implements Runnable {
   	 * @param:  name =: name of account as String
   	 * 	 		w0   =: name of account to write
   	 * @throws: TransactionAbortException on improper transaction
-  	 * @return: ParseResult containing acount name
+  	 * @return: ParseResult containing account name
   	 **/
     private ParseResult parseAccount(String name, String w0) throws TransactionAbortException {
       int accountNum = (int) (name.charAt(0)) - (int) 'A';
-      
+      System.out.println(name);
       if (accountNum < A || accountNum > Z)
           throw new InvalidTransactionError();
       
@@ -190,13 +178,23 @@ class Task implements Runnable {
     @Override
     public void run() {
         String[] commands = transaction.split(";");
-        accountsCache = accounts.clone();
 
+        accountsCache = new HashMap<String, Integer>();
         acc_writ_val_cache = new HashMap<String, Integer>();
         acc_read_val_cache = new HashMap<String, Integer>();
-
-        for (int i = 0; i < commands.length; i++) {
-            String[] words = commands[i].trim().split("\\s");
+        String[] words;
+        int i;
+        for (i = 0; i < commands.length; i++) {
+        	words = commands[i].trim().split("\\s");
+            for (Integer k = 0; k < words.length; k += 2) {
+            	if (isAccount(words[k])) {
+            		System.out.println(words[k]);
+            		accountsCache.put(words[k], lookupAccount(words[k], true).peek());
+            	}
+            }        	
+        }
+        for (i = 0; i < commands.length; i++) {
+            words = commands[i].trim().split("\\s");
             if (words.length < 3)
                 throw new InvalidTransactionError();
             if (!words[1].equals("="))
@@ -277,7 +275,7 @@ class Task implements Runnable {
             acc_writ_val_cache.put(words[0], delta);
         }
         closeAccounts(false);
-        System.out.println("commit: " + transaction);
+        // System.out.println("commit: " + transaction);
         return;
     }
 }

@@ -400,8 +400,9 @@ public class MultithreadedServerTests extends TestCase {
 		// initialize accounts 
 		accounts = new Account[numLetters];
 		for (int i = A; i <= Z; i++) {
-			accounts[i] = new Account(3);
+			accounts[i] = new Account(0);
 		}
+		accounts[0] = new Account(20);
 		accounts[5] = new Account(9); // f 
 		accounts[9] = new Account(10); // j
 		accounts[11] = new Account(5); // l
