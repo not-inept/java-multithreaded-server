@@ -319,6 +319,7 @@ public class MultithreadedServerTests extends TestCase {
   		for (int i = A; i <= Z-2; i++) {
   			Character c = new Character((char) (i+'A'));
   			assertEquals("Account "+c+" differs",(47-2*i),accounts[i].getValue());
+  			System.out.println("account " + c + " was correct with " + (47-2*i));
   		}	
   		assertEquals("Account Y differs",(47),accounts[24].getValue());
   		assertEquals("Account Z differs",(92),accounts[25].getValue());

@@ -67,9 +67,9 @@ class Task implements Runnable {
     		act.close();
     	}
     	if (error) {
-    		try {
-				Thread.sleep((int)(Math.random() * 50) + 1);
-			} catch (InterruptedException e) {}
+//    		try {
+//				Thread.sleep((int)(Math.random() * 100) + 1);
+//			} catch (InterruptedException e) {}
     		restart();
     	}
     }
