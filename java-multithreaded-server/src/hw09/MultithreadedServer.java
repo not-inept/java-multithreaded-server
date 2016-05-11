@@ -40,15 +40,9 @@ class Task implements Runnable {
         if (accountNum < A || accountNum > Z)
             throw new InvalidTransactionError();
         if (name.length() > 1 && init) {
-            for (int i = 1; i < name.length(); i++) {
-                if (name.charAt(i) != '*')
-                    throw new InvalidTransactionError();
-                Integer accountValue =  accounts[accountNum].peek();
-                accountsCache.put(String.valueOf((char)(accountNum%numLetters + 65)), accountValue);
-                accountNum = (accountValue % numLetters);
-            }        	
+     	
         }
-        return accounts[orig];
+        return accounts[orig % 26];
     }
     
   	/**
@@ -133,28 +127,48 @@ class Task implements Runnable {
   	 * @return: ParseResult containing account name
   	 **/
     private ParseResult parseAccount(String name, String w0) throws TransactionAbortException {
+      String lookedat = new String(name);
       int accountNum = (int) (name.charAt(0)) - (int) 'A';
-      System.out.println(name);
       if (accountNum < A || accountNum > Z)
           throw new InvalidTransactionError();
       
       Account a = accounts[accountNum];
       openAccount(accounts[accountNum], String.valueOf((char)(accountNum%numLetters + 65)), w0);
-      
+      int accountValue = 0;
+      if (acc_read_val_cache.containsKey(name)) {
+    	  accountValue = acc_read_val_cache.get(name);
+      }
+      if (acc_writ_val_cache.containsKey(name)) {
+    	  accountValue = acc_writ_val_cache.get(name);
+      }
+      Integer accountValue2 = new Integer(accountValue);
       for (int i = 1; i < name.length(); i++) {
+    	  String curAcc = String.valueOf((char)(accountValue2%numLetters + 65));
           if (name.charAt(i) != '*')
               throw new InvalidTransactionError();
-          
-          a = accounts[accountNum];
+          if (!accountsCache.containsKey(curAcc)) {
+        	  accountValue2 =  accounts[accountNum].peek();
+              accountsCache.put(curAcc, accountValue2);       	  
+          } else {
+        	  accountValue2 = accountsCache.get(curAcc);
+          }
+          accountNum = (accountValue2 % numLetters);
+      }   
+      accountNum = (int) (name.charAt(0)) - (int) 'A';
+
+      for (int i = 1; i < name.length(); i++) {
+          if (name.charAt(i) != '*'){
+              throw new InvalidTransactionError();       	  
+          }
+          if (acc_read_val_cache.containsKey(String.valueOf((char)(accountValue%numLetters + 65)))) {
+        	  accountValue = acc_read_val_cache.get(String.valueOf((char)(accountValue%numLetters + 65)));
+          }
+          if (acc_writ_val_cache.containsKey(String.valueOf((char)(accountValue%numLetters + 65)))) {
+        	  accountValue = acc_writ_val_cache.get(String.valueOf((char)(accountValue%numLetters + 65)));
+          }
           openAccount(accounts[accountNum], String.valueOf((char)(accountNum%numLetters + 65)), w0);
-          
-          Integer accountValue = 0;
-          
-          if (acc_read_val_cache.containsKey(name)) accountValue = acc_read_val_cache.get(name);
-          if (acc_writ_val_cache.containsKey(name)) accountValue = acc_writ_val_cache.get(name);
-          
-          accountNum = (accountValue % numLetters);
           a = accounts[accountNum];
+          accountNum = (accountValue % numLetters);
       }
       return new ParseResult(a,String.valueOf((char)(accountNum + 65)));
 	}
@@ -188,7 +202,6 @@ class Task implements Runnable {
         	words = commands[i].trim().split("\\s");
             for (Integer k = 0; k < words.length; k += 2) {
             	if (isAccount(words[k])) {
-            		System.out.println(words[k]);
             		accountsCache.put(words[k], lookupAccount(words[k], true).peek());
             	}
             }        	
@@ -223,7 +236,7 @@ class Task implements Runnable {
             // 2 : Verify Previously Peeked Values
             
             for (String w : acc_read_val_cache.keySet()) {
-            	try {
+            	try {            		
                		lookupAccount(w, false).verify(acc_read_val_cache.get(w));
 				} catch (TransactionAbortException e) {
 					closeAccounts(true);
