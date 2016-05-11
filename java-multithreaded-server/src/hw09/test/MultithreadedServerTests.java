@@ -333,14 +333,30 @@ public class MultithreadedServerTests extends TestCase {
 		// initialize accounts 
 		accounts = new Account[numLetters];
 		for (int i = A; i <= Z; i++) {
-			accounts[i] = new Account(i);
+			accounts[i] = new Account(3);
 		}			 
 		MultithreadedServer.runServer(ROOT + "hw09/data/readunwritten", accounts);
 		// assert correct account values
-		for (int i = A; i <= Z; i++) {
-			Character c = new Character((char) (i+'A'));
-			assertEquals("Account "+c+" differs",Z,accounts[i].getValue());
+		int passed = 0;
+		if (accounts[0].getValue() == 0 || accounts[0].getValue() == 4) {
+			passed = 1;
 		}
+		assertEquals("A was not a valid value.",1,passed);
+		passed = 0;
+		if (accounts[1].getValue() == accounts[0].getValue() &&  accounts[2].getValue() == accounts[0].getValue()) {
+			passed = 1;
+		}
+		assertEquals("B & C did not equal A.",1,passed);
+		passed = 0;
+		if (accounts[3].getValue() == 0) {
+			passed = 1;
+		}
+		assertEquals("D was not a valid values.",1,passed);
+		passed = 0;
+		if (accounts[4].getValue() == 1 || accounts[4].getValue() == 2) {
+			passed = 1;
+		}
+		assertEquals("E was not a valid values.",1,passed);
 	 }
      
      @Test
@@ -351,13 +367,49 @@ public class MultithreadedServerTests extends TestCase {
 			accounts[i] = new Account(3);
 		}			 
 		MultithreadedServer.runServer(ROOT + "hw09/data/readwritten", accounts);
-		// assert correct account values
-		for (int i = A; i <= Z; i++) {
-			Character c = new Character((char) (i+'A'));
-			assertEquals("Account "+c+" differs",Z,accounts[i].getValue());
+		// check possible values
+		int passed = 0;
+		if (accounts[0].getValue() == 2) {
+			passed = 1;
 		}
+		assertEquals("A was not a valid value.",1,passed);
+		passed = 0;
+		if (accounts[1].getValue() == 2 || accounts[1].getValue() == 1) {
+			passed = 1;
+		}
+		assertEquals("B was not a valid value.",1,passed);
+		passed = 0;
+		if (accounts[2].getValue() == 1 || accounts[2].getValue() == 0 || accounts[2].getValue() == 2) {
+			passed = 1;
+		}
+		assertEquals("C was not a valid value.",1,passed);
+		passed = 0;
+		if (accounts[3].getValue() == 2 || accounts[3].getValue() == 1) {
+			passed = 1;
+		}
+		assertEquals("D was not a valid value.",1,passed);
+		passed = 0;
+		if (accounts[4].getValue() == 2 || accounts[4].getValue() == 1) {
+			passed = 1;
+		}
+		assertEquals("E was not a valid value.",1,passed);
 	 }
-     
+
+     @Test
+	 public void testBasicIndirect() throws IOException {
+		// initialize accounts 
+		accounts = new Account[numLetters];
+		for (int i = A; i <= Z; i++) {
+			accounts[i] = new Account(3);
+		}
+		accounts[5] = new Account(9); // f 
+		accounts[9] = new Account(10); // j
+		accounts[11] = new Account(5); // l
+		accounts[16] = new Account(37); // q | q* => l => 5 q** => l* => f => 9
+		MultithreadedServer.runServer(ROOT + "hw09/data/basicindirect", accounts);
+		assertEquals("A differs by ", (9), accounts[0].getValue());
+		assertEquals("B differs by ", (19), accounts[1].getValue());
+     }
 //     @Test
 //   public void testRotate() throws IOException {
 //         System.out.println("STARTING ROTATE\n\n");
