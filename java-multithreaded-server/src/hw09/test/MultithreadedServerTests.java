@@ -10,6 +10,12 @@ import junit.framework.TestCase;
 
 import org.junit.Test;
 
+//FROM ACCOUNT FILE
+//so it can be given to an Executor thread pool.
+class TransactionUsageError extends Error {}
+//this is intended to be fatal
+class InvalidTransactionError extends Error {}
+
 //class fileCreator {
 //	
 //	/**
@@ -268,32 +274,36 @@ public class MultithreadedServerTests extends TestCase {
     private static final int Z = constants.Z;
     private static final int numLetters = constants.numLetters;
     private static Account[] accounts;
-            
-    protected static void dumpAccounts() {
-	    // output values:
-	    for (int i = A; i <= Z; i++) {
-	       System.out.print("    ");
-	       if (i < 10) System.out.print("0");
-	       System.out.print(i + " ");
-	       System.out.print(new Character((char) (i + 'A')) + ": ");
-	       accounts[i].print();
-	       System.out.print(" (");
-	       accounts[i].printMod();
-	       System.out.print(")\n");
-	    }
-	 }    
-        
+    private static final String ROOT = "src/";
+    
+//    protected static void dumpAccounts() {
+//	    // output values:
+//	    for (int i = A; i <= Z; i++) {
+//	       System.out.print("    ");
+//	       if (i < 10) System.out.print("0");
+//	       System.out.print(i + " ");
+//	       System.out.print(new Character((char) (i + 'A')) + ": ");
+//	       accounts[i].print();
+//	       System.out.print(" (");
+//	       accounts[i].printMod();
+//	       System.out.print(")\n");
+//	    }
+//	 }
+    
+     @Test 
+	 public static void testConstants() throws IOException {
+    	 constants test = new constants();
+    	 assertNotNull(test!=null);
+     }
+     
      @Test
 	 public void testIncrement() throws IOException {
-   	  
 		// initialize accounts 
 		accounts = new Account[numLetters];
 		for (int i = A; i <= Z; i++) {
 			accounts[i] = new Account(Z-i);
 		}			 
-		
-		MultithreadedServer.runServer("src/hw09/data/increment", accounts);
-	
+		MultithreadedServer.runServer(ROOT + "hw09/data/increment", accounts);
 		// assert correct account values
 		for (int i = A; i <= Z; i++) {
 			Character c = new Character((char) (i+'A'));
@@ -301,31 +311,77 @@ public class MultithreadedServerTests extends TestCase {
 		}
 
 	 }
+
+     @Test
+	 public void testDecrement() throws IOException {
+		// initialize accounts 
+		accounts = new Account[numLetters];
+		for (int i = A; i <= Z; i++) {
+			accounts[i] = new Account(Z-i);
+		}			 
+		MultithreadedServer.runServer(ROOT + "hw09/data/decrement", accounts);
+		// assert correct account values
+		for (int i = A; i <= Z; i++) {
+			Character c = new Character((char) (i+'A'));
+			assertEquals("Account "+c+" differs",Z-i-1,accounts[i].getValue());
+		}
+
+	 }
      
      @Test
-   public void testRotate() throws IOException {
-         System.out.println("STARTING ROTATE\n\n");
-
-   	  // initialize accounts
-   	accounts = new Account[numLetters];
-   	
-  		for (int i = A; i <= Z; i++) {
-  			accounts[i] = new Account(Z-i);
-  		}			 
-  		
-  		MultithreadedServer.runServer("src/hw09/data/rotate", accounts);
-   
-     	// assert correct account values
-  		for (int i = A; i <= Z-2; i++) {
-  			Character c = new Character((char) (i+'A'));
-  			assertEquals("Account "+c+" differs",(47-2*i),accounts[i].getValue());
-  			System.out.println("account " + c + " was correct with " + (47-2*i));
-  		}	
-  		assertEquals("Account Y differs",(47),accounts[24].getValue());
-  		assertEquals("Account Z differs",(92),accounts[25].getValue());
-  		
-   }
+	 public void testReadUnwritten() throws IOException {
+		// initialize accounts 
+		accounts = new Account[numLetters];
+		for (int i = A; i <= Z; i++) {
+			accounts[i] = new Account(i);
+		}			 
+		MultithreadedServer.runServer(ROOT + "hw09/data/readunwritten", accounts);
+		// assert correct account values
+		for (int i = A; i <= Z; i++) {
+			Character c = new Character((char) (i+'A'));
+			assertEquals("Account "+c+" differs",Z,accounts[i].getValue());
+		}
+	 }
      
+     @Test
+	 public void testReadWritten() throws IOException {
+		// initialize accounts 
+		accounts = new Account[numLetters];
+		for (int i = A; i <= Z; i++) {
+			accounts[i] = new Account(3);
+		}			 
+		MultithreadedServer.runServer(ROOT + "hw09/data/readwritten", accounts);
+		// assert correct account values
+		for (int i = A; i <= Z; i++) {
+			Character c = new Character((char) (i+'A'));
+			assertEquals("Account "+c+" differs",Z,accounts[i].getValue());
+		}
+	 }
+     
+//     @Test
+//   public void testRotate() throws IOException {
+//         System.out.println("STARTING ROTATE\n\n");
+//
+//   	  // initialize accounts
+//   	accounts = new Account[numLetters];
+//   	
+//  		for (int i = A; i <= Z; i++) {
+//  			accounts[i] = new Account(Z-i);
+//  		}			 
+//  		
+//  		MultithreadedServer.runServer(ROOT + "src/hw09/data/rotate", accounts);
+//   
+//     	// assert correct account values
+//  		for (int i = A; i <= Z-2; i++) {
+//  			Character c = new Character((char) (i+'A'));
+//  			assertEquals("Account "+c+" differs",(47-2*i),accounts[i].getValue());
+//  			System.out.println("account " + c + " was correct with " + (47-2*i));
+//  		}	
+//  		assertEquals("Account Y differs",(47),accounts[24].getValue());
+//  		assertEquals("Account Z differs",(92),accounts[25].getValue());
+//  		
+//   }
+//     
 //     @Test
 //	 public void testRandom_One() throws IOException {
 //   	  

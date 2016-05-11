@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 // TO DO: Task is currently an ordinary class.
 // You will need to modify it to make it a task,
-// so it can be given to an Executor thread pool.
+
 
 class Task implements Runnable {
     private static final int A = constants.A;
@@ -133,8 +133,8 @@ class Task implements Runnable {
     @Override
     public void run() {
         String[] commands = transaction.split(";");
-        
         accountsCache = accounts.clone();
+
         acc_writ_val_cache = new HashMap<String, Integer>();
         acc_read_val_cache = new HashMap<String, Integer>();
 
