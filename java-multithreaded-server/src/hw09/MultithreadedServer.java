@@ -40,32 +40,52 @@ class Task implements Runnable {
         transaction = trans;
     }
     
-    // return account represented by string
-    
-    private Account lookupAccount(String name, Boolean cached) {
+ 	/**
+	 * @param:  name   =: name of account as String
+	 * 	 		cached =: weither to look at cached or global
+	 * @throws: InvalidTransactionError on improper name
+	 * @return: Account associated with name
+	 **/
+    private Account lookupAccount(String name, Boolean cached) throws InvalidTransactionError {
         int accountNum = (int) (name.charAt(0)) - (int) 'A';
-        if (accountNum < A || accountNum > Z)
+        
+        if (accountNum < A || accountNum > Z || name.length() > 1)
             throw new InvalidTransactionError();
+        
         Account a;
+        
         if (cached) a = accountsCache[accountNum];
-        else a = accounts[accountNum];
-        if (name.length() > 1) System.out.println("It should never print this D:");
+        else        a = accounts     [accountNum];
+        
         return a;
     }
     
+  	/**
+ 	 * @param:  error  =: case if closing due to error
+ 	 * @effects: This when closed by error restarts
+ 	 **/
     private void closeAccounts(Boolean error) {
     	Account act;
+    	
+    	// Close all write accounts after update
     	for (String key : acc_writ_val_cache.keySet()) {
     		act = lookupAccount(key,false);
     		if (!error) {
     			act.update(acc_writ_val_cache.get(key));
     		}
-    		act.close();
+    		/* shared mutable state */
+    		       act.close();
+    		/* shared mutable state */
     	}
+    	
+    	// Close all read accounts
     	for (String key : acc_read_val_cache.keySet()) {
     		act = lookupAccount(key,false);
-    		act.close();
+    		/* shared mutable state */
+	             act.close();
+	      /* shared mutable state */
     	}
+    	
     	if (error) {
 //    		try {
 //				Thread.sleep((int)(Math.random() * 100) + 1);
@@ -74,24 +94,41 @@ class Task implements Runnable {
     	}
     }
     
+  	/**
+ 	 * @param:  name   =: name of account as String
+ 	 * 	 		cached =: weither to look at cached or global
+ 	 * @throws: InvalidTransactionError on improper name
+ 	 * @return: Account associated with name
+ 	 **/
     private void openAccount(Account act, String w, String w0) throws TransactionAbortException {
-    		Integer pee = 0;
-        	if (w.equals(w0)) {	         
-        		if (!acc_writ_val_cache.containsKey(w)) {
-        			pee = lookupAccount(w,true).peek();
-        			act.open(true);
-    				acc_writ_val_cache.put(w, pee);
+    		Integer peek = 0;
+    		
+        	if (w.equals(w0)) {	                        // case this is the write account        
+        		if (!acc_writ_val_cache.containsKey(w)) { // Avoid errors
+        			peek = lookupAccount(w,true).peek();  
+        			
+        			/* shared immutable state */
+        			      act.open(true);
+        			/* shared immutable state */
+        			      
+    				acc_writ_val_cache.put(w, peek);
         			acc_read_val_cache.remove(w);
         		}
         	} else {
-        		if (!acc_writ_val_cache.containsKey(w) && !acc_read_val_cache.containsKey(w)) {
-        			pee = lookupAccount(w,true).peek();
-        			act.open(false);
-        			acc_read_val_cache.put(w, pee);
+        		if (!acc_writ_val_cache.containsKey(w) && // case read
+        		    !acc_read_val_cache.containsKey(w)) { // Avoid errors
+        			peek = lookupAccount(w,true).peek();
+        			
+        			/* shared immutable state */
+        			      act.open(false);
+        			/* shared immutable state */
+        			      
+        			acc_read_val_cache.put(w, peek);
         		}
         	}
     }
     
+  
     private class ParseResult {
     	// public Account account;
     	public String name;
@@ -101,30 +138,50 @@ class Task implements Runnable {
     	}
     }
     
+   /**
+  	 * @param:  name =: name of account as String
+  	 * 	 		w0   =: name of account to write
+  	 * @throws: TransactionAbortException on improper transaction
+  	 * @return: ParseResult containing acount name
+  	 **/
     private ParseResult parseAccount(String name, String w0) throws TransactionAbortException {
       int accountNum = (int) (name.charAt(0)) - (int) 'A';
+      
       if (accountNum < A || accountNum > Z)
           throw new InvalidTransactionError();
+      
       Account a = accounts[accountNum];
       openAccount(accounts[accountNum], String.valueOf((char)(accountNum%numLetters + 65)), w0);
+      
       for (int i = 1; i < name.length(); i++) {
           if (name.charAt(i) != '*')
               throw new InvalidTransactionError();
+          
           a = accounts[accountNum];
           openAccount(accounts[accountNum], String.valueOf((char)(accountNum%numLetters + 65)), w0);
+          
           Integer accountValue = 0;
+          
           if (acc_read_val_cache.containsKey(name)) accountValue = acc_read_val_cache.get(name);
           if (acc_writ_val_cache.containsKey(name)) accountValue = acc_writ_val_cache.get(name);
+          
           accountNum = (accountValue % numLetters);
           a = accounts[accountNum];
       }
       return new ParseResult(a,String.valueOf((char)(accountNum + 65)));
 	}
 
+    /**
+   	 * @param:  name =: name of account as String
+   	 * @return: bool if this is an account
+   	 **/
     private Boolean isAccount(String name) {
         return !(name.charAt(0) >= '0' && name.charAt(0) <= '9');
     }
     
+    /**
+   	 * @effect: restarts the thread due to collision
+   	 **/
     public void restart() {
     	run();
     	return;
@@ -219,8 +276,6 @@ class Task implements Runnable {
             }
             acc_writ_val_cache.put(words[0], delta);
         }
-    	// 3 : Perform All Updates        
-    	// 4 : Close All Open Accounts
         closeAccounts(false);
         System.out.println("commit: " + transaction);
         return;
