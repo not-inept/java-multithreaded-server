@@ -17,6 +17,7 @@ class Task implements Runnable {
     private static final int numLetters = constants.numLetters;
 
     private Account[] accounts;
+
     private String transaction;
 
     // TO DO: The sequential version of Task peeks at accounts
@@ -65,12 +66,16 @@ class Task implements Runnable {
     public void run() {
         // tokenize transaction
         String[] commands = transaction.split(";");
-
         for (int i = 0; i < commands.length; i++) {
             String[] words = commands[i].trim().split("\\s");
             if (words.length < 3)
                 throw new InvalidTransactionError();
             Account lhs = parseAccount(words[0]);
+            try {
+				lhs.open(true);
+			} catch (TransactionAbortException e1) {
+				e1.printStackTrace();
+			}
             if (!words[1].equals("="))
                 throw new InvalidTransactionError();
             int rhs = parseAccountOrNum(words[2]);
